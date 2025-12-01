@@ -1,19 +1,17 @@
-# Cell Spec CLI
+Cell Spec CLI
 
-Cell Spec CLI reads a Cell specification written in markdown and generates two files:
+Cell Spec CLI reads a markdown Cell specification and generates two files:
 
-- a Terraform `.tfvars` file with variables for infrastructure provisioning  
-- a `.env` file with environment variables for ECS tasks
+a Terraform .tfvars file with variables for infrastructure provisioning
 
-This mirrors the pattern where engineers edit simple markdown tables and automation converts them into machine readable config.
+a .env file with environment variables for ECS tasks
 
----
+This matches the workflow where engineers edit simple markdown tables and automation converts them into machine readable config.
 
-## What the tool does
+What the tool does
 
 Given a markdown file like:
 
-```markdown
 # icc-01 Cell
 Realm: dev-east
 Region: us-east-2
@@ -41,12 +39,10 @@ Region: us-east-2
 | node_type | cache.t3.micro |
 | nodes     | 1              |
 
-```
 
 It produces:
 
-icc-01.tfvars:
-
+icc-01.tfvars
 cell_name  = "icc-01"
 realm_name = "dev-east"
 region     = "us-east-2"
@@ -79,10 +75,7 @@ db_storage_gb     = 20
 cache_node_type = "cache.t3.micro"
 cache_nodes     = 1
 
-
-
-icc-01.env:
-
+icc-01.env
 CELL_NAME=icc-01
 REALM_NAME=dev-east
 REGION=us-east-2
@@ -109,14 +102,11 @@ DB_STORAGE_GB=20
 CACHE_NODE_TYPE=cache.t3.micro
 CACHE_NODES=1
 
-
-
-Project Structure:
-
+Project structure
 src/
   cellcli/
     cli.py         CLI entrypoint
-    parser.py      Markdown parser to CellSpec
+    parser.py      Markdown parser → CellSpec
     models.py      Dataclasses for Cell, layers, database, cache
     generators.py  Writers for .tfvars and .env
     errors.py      Custom error types
@@ -125,10 +115,8 @@ examples/
   cell-spec.md     Sample input spec
 
 tests/
-  test_parser.py       Parser tests
-  test_generators.py   Generator tests
-
-
+  test_parser.py       Tests for parser behavior
+  test_generators.py   Tests for output generators
 
 Usage
 
@@ -141,37 +129,43 @@ python -m cellcli.cli --input examples/cell-spec.md --out-prefix examples/icc-01
 This generates:
 
 examples/icc-01.tfvars
-
 examples/icc-01.env
 
-You can point --input at any markdown file with the same structure to generate configs for other Cells.
 
-Validation and errors
+You can supply any markdown file with the same structure to generate configs for additional Cells.
+
+Validation
 
 The parser validates:
 
-required fields: cell name, realm, region
+presence of cell_name, realm, region
 
 presence of all four compute layers: kernel, platform, gateway, apps
 
-required database fields: instance_class, storage_gb
+required database settings: instance_class, storage_gb
 
-required cache fields: node_type, nodes
+required cache settings: node_type, nodes
 
-all numeric fields are positive integers
+positive integer values for all numeric fields
 
-Failures raise CellSpecError and the CLI exits with a clear message, for example:
+Invalid inputs produce clear errors, for example:
 
 [cell-spec-cli] Spec error in examples/cell-spec.md: Database 'storage_gb' must be positive.
 
 Testing
 
-Tests are written with the standard library unittest module.
-
-Run all tests with:
+Tests are written with unittest:
 
 export PYTHONPATH=src
 python -m unittest discover -s tests
 
 
-This exercises the parser against examples/cell-spec.md and checks that the generators produce the expected fields in .tfvars and .env.
+This runs parser and generator tests against the provided example spec.
+
+Notes
+
+All parsing is done with simple string operations to keep the tool lightweight and transparent
+
+Output formatting is deterministic to support clean diffs
+
+The CLI uses clear exit codes for CI integration
