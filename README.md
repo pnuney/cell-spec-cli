@@ -41,6 +41,8 @@ Region: us-east-2
 | node_type | cache.t3.micro |
 | nodes     | 1              |
 
+```
+
 It produces:
 
 icc-01.tfvars:
