@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+.venv/
+
+# VS Code / Cursor
+.vscode/
+.idea/
+
+# Mac
+.DS_Store
