@@ -194,7 +194,7 @@ Tests cover:
 Built with a specific cell architecture in mind:
 
 **Architecture:**
-- Dvery cell has exactly 4 layers: kernel, platform, gateway, apps
+- Every cell has exactly 4 layers: kernel, platform, gateway, apps
 - Layer names and count fixed - only resource values configurable
 - One RDS instance per cell
 - One ElastiCache cluster per cell
