@@ -1,0 +1,1 @@
+#makes tests folder a python package so test discovery and imports work correctly

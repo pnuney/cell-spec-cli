@@ -1,17 +1,39 @@
-Cell Spec CLI
+# Cell Spec CLI
 
-Cell Spec CLI reads a markdown Cell specification and generates two files:
+> Configuration-as-code tool: markdown cell specs → terraform + env configs
 
-a Terraform .tfvars file with variables for infrastructure provisioning
+## Overview
 
-a .env file with environment variables for ECS tasks
+Cell Spec CLI converts human-readable markdown specifications into machine-readable configuration files for infrastructure provisioning.
 
-This matches the workflow where engineers edit simple markdown tables and automation converts them into machine readable config.
+**Input:** Markdown tables describing infrastructure
+**Output:** Terraform `.tfvars` + `.env` files for ECS tasks
 
-What the tool does
+Workflow: engineers edit simple markdown → automation converts to machine-readable config
 
-Given a markdown file like:
+---
 
+## Quick Start
+
+```bash
+# setup
+export PYTHONPATH=src
+
+# generate configs
+python -m cellcli.cli --input examples/cell-spec.md --out-prefix examples/icc-01
+```
+
+**Generates:**
+- `examples/icc-01.tfvars` - terraform variables
+- `examples/icc-01.env` - ECS environment variables
+
+---
+
+## How It Works
+
+### Input: Markdown Specification
+
+```markdown
 # icc-01 Cell
 Realm: dev-east
 Region: us-east-2
@@ -38,11 +60,12 @@ Region: us-east-2
 |-----------|----------------|
 | node_type | cache.t3.micro |
 | nodes     | 1              |
+```
 
+### Output: Terraform Variables
 
-It produces:
-
-icc-01.tfvars
+**`icc-01.tfvars`**
+```hcl
 cell_name  = "icc-01"
 realm_name = "dev-east"
 region     = "us-east-2"
@@ -74,8 +97,12 @@ db_storage_gb     = 20
 # cache
 cache_node_type = "cache.t3.micro"
 cache_nodes     = 1
+```
 
-icc-01.env
+### Output: Environment Variables
+
+**`icc-01.env`**
+```bash
 CELL_NAME=icc-01
 REALM_NAME=dev-east
 REGION=us-east-2
@@ -101,71 +128,111 @@ DB_STORAGE_GB=20
 
 CACHE_NODE_TYPE=cache.t3.micro
 CACHE_NODES=1
+```
 
-Project structure
-src/
-  cellcli/
-    cli.py         CLI entrypoint
-    parser.py      Markdown parser → CellSpec
-    models.py      Dataclasses for Cell, layers, database, cache
-    generators.py  Writers for .tfvars and .env
-    errors.py      Custom error types
+---
+
+## Project Structure
+
+```
+src/cellcli/
+├── cli.py         # CLI entrypoint, orchestrates workflow
+├── parser.py      # markdown → CellSpec objects
+├── models.py      # dataclasses: Cell, layers, database, cache
+├── generators.py  # CellSpec → tfvars/env strings
+└── errors.py      # custom exceptions
 
 examples/
-  cell-spec.md     Sample input spec
+└── cell-spec.md   # sample input specification
 
 tests/
-  test_parser.py       Tests for parser behavior
-  test_generators.py   Tests for output generators
+├── test_parser.py     # parser validation tests
+└── test_generators.py # output generation tests
+```
 
-Usage
+---
 
-From the project root:
+## Validation
 
-export PYTHONPATH=src
-python -m cellcli.cli --input examples/cell-spec.md --out-prefix examples/icc-01
+Parser enforces:
 
+- **Required metadata:** `cell_name`, `realm`, `region`
+- **Required layers:** `kernel`, `platform`, `gateway`, `apps` (fixed architecture)
+- **Database settings:** `instance_class`, `storage_gb` (positive integer)
+- **Cache settings:** `node_type`, `nodes` (positive integer)
+- **Numeric validation:** all numbers must be positive
 
-This generates:
+### Error Example
 
-examples/icc-01.tfvars
-examples/icc-01.env
-
-
-You can supply any markdown file with the same structure to generate configs for additional Cells.
-
-Validation
-
-The parser validates:
-
-presence of cell_name, realm, region
-
-presence of all four compute layers: kernel, platform, gateway, apps
-
-required database settings: instance_class, storage_gb
-
-required cache settings: node_type, nodes
-
-positive integer values for all numeric fields
-
-Invalid inputs produce clear errors, for example:
-
+```
 [cell-spec-cli] Spec error in examples/cell-spec.md: Database 'storage_gb' must be positive.
+```
 
-Testing
+**Exit codes:**
+- `1` - spec validation error
+- `2` - unexpected error
+- `3` - file write error
 
-Tests are written with unittest:
+---
 
+## Testing
+
+```bash
 export PYTHONPATH=src
 python -m unittest discover -s tests
+```
 
+Tests cover:
+- Parsing valid/invalid specs
+- Generator output validation
+- Error handling
 
-This runs parser and generator tests against the provided example spec.
+---
 
-Notes
+## Design Assumptions
 
-All parsing is done with simple string operations to keep the tool lightweight and transparent
+### Architecture Assumptions
+1. **Fixed 4-layer compute model** - every cell has exactly: kernel, platform, gateway, apps
+2. **Single database per cell** - one RDS instance per cell
+3. **Single cache cluster per cell** - one ElastiCache cluster per cell
+4. **No layer customization** - layer names/count fixed, only resources configurable
 
-Output formatting is deterministic to support clean diffs
+### Input Assumptions
+5. **Strict markdown format** - tables must have exact column headers
+6. **Cell name in title** - extracted from `# <name> Cell` format
+7. **Key-value metadata** - `Realm:` and `Region:` as plain text pairs
+8. **Table structure** - compute layers table has 4+ columns, db/cache have 2 columns
 
-The CLI uses clear exit codes for CI integration
+### Output Assumptions
+9. **Terraform variable naming** - follows `<layer>_<attribute>` convention
+10. **Environment variable naming** - uppercase with underscores
+11. **Deterministic output** - fixed layer order (kernel→platform→gateway→apps) for clean git diffs
+12. **No comments in .env** - only KEY=VALUE pairs for ECS compatibility
+
+### Workflow Assumptions
+13. **Zero external dependencies** - pure Python stdlib for portability
+14. **Single-file input** - one markdown file per cell
+15. **Prefix-based output** - `--out-prefix foo` generates `foo.tfvars` + `foo.env`
+16. **CI/CD integration** - exit codes designed for automation pipelines
+
+### Validation Assumptions
+17. **Positive integers only** - no zero/negative values for resources
+18. **No resource limits** - doesn't validate AWS-specific instance type validity
+19. **No cross-field validation** - doesn't check resource ratios/relationships
+20. **Fail-fast parsing** - stops at first validation error
+
+---
+
+## Design Principles
+
+- **Lightweight** - no external dependencies, simple string parsing
+- **Transparent** - easy to debug, no black-box processing
+- **Deterministic** - same input always produces identical output
+- **Extensible** - adding new resource types straightforward
+- **Testable** - pure functions enable comprehensive testing
+
+---
+
+## License
+
+MIT

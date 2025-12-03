@@ -3,7 +3,7 @@ from typing import List
 
 
 @dataclass
-class LayerSpec:
+class LayerSpec: #1 compute layer with these fields
     name: str
     vcpu: int
     memory_mb: int
@@ -11,22 +11,22 @@ class LayerSpec:
 
 
 @dataclass
-class DatabaseSpec:
+class DatabaseSpec: #database instance class and storage size
     instance_class: str
     storage_gb: int
 
 
 @dataclass
-class CacheSpec:
+class CacheSpec: #define cache node type and node count
     node_type: str
     nodes: int
 
 
 @dataclass
-class CellSpec:
+class CellSpec: #top level object
     cell_name: str
     realm_name: str
     region: str
-    layers: List[LayerSpec]
+    layers: List[LayerSpec] #all compute layers
     database: DatabaseSpec
     cache: CacheSpec

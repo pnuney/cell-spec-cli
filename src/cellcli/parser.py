@@ -7,12 +7,12 @@ from .models import CellSpec, LayerSpec, DatabaseSpec, CacheSpec
 from .errors import CellSpecError
 
 
-def parse_cell_spec(path: Path) -> CellSpec:
-    """Parse a markdown Cell spec file into a CellSpec object."""
+def parse_cell_spec(path: Path) -> CellSpec: #main parser entrypoint
+    """Parse a markdown Cell spec file into a CellSpec object.""" #what is happening here, generating what? then outputting what? use return keyword
     if not path.exists():
         raise CellSpecError(f"Spec file not found: {path}")
 
-    text = path.read_text(encoding="utf8")
+    text = path.read_text(encoding="utf8") #read file into list of lines
     lines = [line.rstrip("\n") for line in text.splitlines()]
 
     cell_name: str | None = None
@@ -29,24 +29,24 @@ def parse_cell_spec(path: Path) -> CellSpec:
     while i < n:
         line = lines[i].strip()
 
-        # Top level title: "# icc-01 Cell"
+        #top level title: "icc-01 Cell"
         if line.startswith("# "):
             cell_name = _parse_cell_name_from_title(line)
             i += 1
             continue
 
-        # Simple key lines: "Realm: dev-east"
+        #simple key lines: "realm: dev-east"
         if line.lower().startswith("realm:"):
             realm_name = line.split(":", 1)[1].strip()
             i += 1
             continue
-
+        #simple key lines: "region: us-east-1"
         if line.lower().startswith("region:"):
             region = line.split(":", 1)[1].strip()
             i += 1
             continue
 
-        # Section headers
+        #section headers
         if line.lower().startswith("## compute layers"):
             layers, i = _parse_layers_table(lines, i + 1)
             continue
@@ -61,7 +61,7 @@ def parse_cell_spec(path: Path) -> CellSpec:
 
         i += 1
 
-    # Basic validation
+    #firstbasic validation
     if not cell_name:
         raise CellSpecError("Missing Cell title line (expected '# <name> Cell').")
 
@@ -80,7 +80,7 @@ def parse_cell_spec(path: Path) -> CellSpec:
     if missing:
         raise CellSpecError(f"Missing required compute layers: {', '.join(sorted(missing))}.")
 
-    # Database settings
+    #db settings
     if not db_settings:
         raise CellSpecError("No database settings found under '## Database'.")
 
@@ -95,13 +95,13 @@ def parse_cell_spec(path: Path) -> CellSpec:
     except ValueError as exc:
         raise CellSpecError("Database 'storage_gb' must be an integer.") from exc
 
-    # Cache settings
+    #cache settings
     if not cache_settings:
         raise CellSpecError("No cache settings found under '## Cache'.")
 
     if "node_type" not in cache_settings or "nodes" not in cache_settings:
         raise CellSpecError("Cache table must define 'node_type' and 'nodes'.")
-
+    #convert numeric fields to integers
     try:
         cache = CacheSpec(
             node_type=cache_settings["node_type"],
@@ -124,13 +124,13 @@ def parse_cell_spec(path: Path) -> CellSpec:
         cache=cache,
     )
 
-    _validate_cell_spec_numbers(cell)
+    _validate_cell_spec_numbers(cell) #second validation pass
 
     return cell
 
 
 def _parse_cell_name_from_title(line: str) -> str:
-    # Expect something like "# icc-01 Cell"
+    #expect smtg like "# icc-01 Cell"
     title = line.lstrip("#").strip()
     if title.lower().endswith(" cell"):
         title = title[:-4].strip()
@@ -141,11 +141,11 @@ def _parse_layers_table(lines: List[str], start: int) -> tuple[List[LayerSpec], 
     i = start
     n = len(lines)
 
-    # Skip empty lines before the header
+    #skip empty lines before header
     while i < n and not lines[i].strip():
         i += 1
 
-    # Expect header row and separator row
+    #expect header and separator row
     if i >= n or not lines[i].strip().startswith("|"):
         raise CellSpecError("Compute Layers table header row is missing or malformed.")
     i += 1
@@ -161,12 +161,12 @@ def _parse_layers_table(lines: List[str], start: int) -> tuple[List[LayerSpec], 
         if not line or not line.startswith("|"):
             break
 
-        # Skip separator style rows just in case
+        #skip separator style rows just in case
         if set(line.replace("|", "").strip()) <= {"-", ":"}:
             i += 1
             continue
 
-        cells = [c.strip() for c in line.strip("|").split("|")]
+        cells = [c.strip() for c in line.strip("|").split("|")]#table row to column values
         if len(cells) < 4:
             raise CellSpecError("Compute Layers row must have at least 4 columns.")
 
@@ -178,7 +178,8 @@ def _parse_layers_table(lines: List[str], start: int) -> tuple[List[LayerSpec], 
             tasks = int(tasks_str)
         except ValueError as exc:
             raise CellSpecError(f"Invalid numeric values in compute layer row: {line}") from exc
-
+        
+        #text to object conversion
         layers.append(
             LayerSpec(
                 name=name.lower(),
@@ -197,7 +198,7 @@ def _parse_kv_table(lines: List[str], start: int) -> tuple[Dict[str, str], int]:
     i = start
     n = len(lines)
 
-    # Skip empty lines before the header
+    #skip empty lines before header
     while i < n and not lines[i].strip():
         i += 1
 
@@ -219,7 +220,7 @@ def _parse_kv_table(lines: List[str], start: int) -> tuple[Dict[str, str], int]:
         if set(line.replace("|", "").strip()) <= {"-", ":"}:
             i += 1
             continue
-
+        #split row on |, trim whitespace
         cells = [c.strip() for c in line.strip("|").split("|")]
         if len(cells) < 2:
             raise CellSpecError(f"Key value row must have at least 2 columns: {line}")
@@ -234,6 +235,7 @@ def _parse_kv_table(lines: List[str], start: int) -> tuple[Dict[str, str], int]:
 
     return result, i
 
+#numeric validation
 def _validate_cell_spec_numbers(cell: CellSpec) -> None:
     for layer in cell.layers:
         if layer.vcpu <= 0:

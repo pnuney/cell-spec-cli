@@ -7,7 +7,7 @@ from cellcli.errors import CellSpecError
 
 class TestParser(unittest.TestCase):
     def setUp(self) -> None:
-        # Project root is two levels up from this file
+        #project root is two levels up from this file
         self.root = Path(__file__).resolve().parents[1]
         self.spec_path = self.root / "examples" / "cell-spec.md"
 
@@ -18,15 +18,15 @@ class TestParser(unittest.TestCase):
         self.assertEqual(cell.realm_name, "dev-east")
         self.assertEqual(cell.region, "us-east-2")
 
-        # Layers
+        #layers
         names = {layer.name for layer in cell.layers}
         self.assertSetEqual(names, {"kernel", "platform", "gateway", "apps"})
 
-        # Database
+        #database
         self.assertEqual(cell.database.instance_class, "db.t3.small")
         self.assertEqual(cell.database.storage_gb, 20)
 
-        # Cache
+        #cache
         self.assertEqual(cell.cache.node_type, "cache.t3.micro")
         self.assertEqual(cell.cache.nodes, 1)
 

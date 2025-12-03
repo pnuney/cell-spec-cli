@@ -12,6 +12,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Generate .tfvars and .env from a Cell spec markdown file"
     )
 
+    #cli step 1: accept command line arguments for input md, output prefix
     parser.add_argument(
         "--input",
         "-i",
@@ -40,15 +41,18 @@ def main() -> None:
     out_prefix.parent.mkdir(parents=True, exist_ok=True)
 
     try:
+        #cli step 2: use parser to convert md into a cellspec
         cell = parse_cell_spec(spec_path)
+
     except CellSpecError as exc:
         print(f"[cell-spec-cli] Spec error in {spec_path}: {exc}", file=sys.stderr)
         sys.exit(1)
     except Exception as exc:
-        # Catch any unexpected bugs so the user sees a clean message
+        #catch anyunexpected bugs so that user sees readable message
         print(f"[cell-spec-cli] Unexpected error: {exc}", file=sys.stderr)
         sys.exit(2)
 
+    #cli step 3: run generators to produce tfvars and env content
     tfvars_content = generate_tfvars(cell)
     env_content = generate_env(cell)
 
@@ -56,6 +60,7 @@ def main() -> None:
     env_path = out_prefix.with_suffix(".env")
 
     try:
+        #cli step 4: write results to xyz.tfvars and xyz.env
         tfvars_path.write_text(tfvars_content, encoding="utf8")
         env_path.write_text(env_content, encoding="utf8")
     except OSError as exc:
