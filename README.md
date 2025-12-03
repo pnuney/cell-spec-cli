@@ -189,50 +189,42 @@ Tests cover:
 
 ---
 
-## Design Assumptions
+## Assumptions
 
-### Architecture Assumptions
-1. **Fixed 4-layer compute model** - every cell has exactly: kernel, platform, gateway, apps
-2. **Single database per cell** - one RDS instance per cell
-3. **Single cache cluster per cell** - one ElastiCache cluster per cell
-4. **No layer customization** - layer names/count fixed, only resources configurable
+Built with a specific cell architecture in mind:
 
-### Input Assumptions
-5. **Strict markdown format** - tables must have exact column headers
-6. **Cell name in title** - extracted from `# <name> Cell` format
-7. **Key-value metadata** - `Realm:` and `Region:` as plain text pairs
-8. **Table structure** - compute layers table has 4+ columns, db/cache have 2 columns
+**Architecture:**
+- Dvery cell has exactly 4 layers: kernel, platform, gateway, apps
+- Layer names and count fixed - only resource values configurable
+- One RDS instance per cell
+- One ElastiCache cluster per cell
 
-### Output Assumptions
-9. **Terraform variable naming** - follows `<layer>_<attribute>` convention
-10. **Environment variable naming** - uppercase with underscores
-11. **Deterministic output** - fixed layer order (kernel→platform→gateway→apps) for clean git diffs
-12. **No comments in .env** - only KEY=VALUE pairs for ECS compatibility
+**Input format:**
+- Markdown tables with exact column headers expected
+- Cell name extracted from `# <name> Cell` title format
+- Realm/region as simple `Key: value` lines
+- Compute layers table needs 4+ columns, db/cache tables need 2
 
-### Workflow Assumptions
-13. **Zero external dependencies** - pure Python stdlib for portability
-14. **Single-file input** - one markdown file per cell
-15. **Prefix-based output** - `--out-prefix foo` generates `foo.tfvars` + `foo.env`
-16. **CI/CD integration** - exit codes designed for automation pipelines
+**Output:**
+- Terraform vars use `<layer>_<attribute>` naming
+- Env vars uppercase with underscores
+- Layers always output in same order (kernel→platform→gateway→apps) for clean diffs
+- .env files have no comments (ECS compatibility)
 
-### Validation Assumptions
-17. **Positive integers only** - no zero/negative values for resources
-18. **No resource limits** - doesn't validate AWS-specific instance type validity
-19. **No cross-field validation** - doesn't check resource ratios/relationships
-20. **Fail-fast parsing** - stops at first validation error
+**Validation:**
+- All resource numbers must be positive (no zero or negative)
+- Does not validate AWS-specific limits (e.g., instance types)
+- Does not check cross-field constraints (like memory-to-cpu ratios)
+- Fails on first error instead of collecting all errors
 
----
-
-## Design Principles
-
-- **Lightweight** - no external dependencies, simple string parsing
-- **Transparent** - easy to debug, no black-box processing
-- **Deterministic** - same input always produces identical output
-- **Extensible** - adding new resource types straightforward
-- **Testable** - pure functions enable comprehensive testing
+**Workflow:**
+- Pure Python stdlib, no external dependencies
+- One markdown file → one .tfvars + one .env
+- `--out-prefix foo` generates `foo.tfvars` and `foo.env`
+- Exit codes for CI/CD: 1=spec error, 2=unexpected, 3=file write
 
 ---
 
-## License
+## Why This Design
 
-MIT
+This design keeps it simple - there are no dependencies, only string parsing. Deterministic output means that git diffs stay clean. Two-pass validation catches structural issues before type issues. It is designed for automation pipelines where you want fast feedback and clear errors.
